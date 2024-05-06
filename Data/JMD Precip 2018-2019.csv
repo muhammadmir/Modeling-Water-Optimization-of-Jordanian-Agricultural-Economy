@@ -1,0 +1,41 @@
+﻿Station,Element,YEAR,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEPT,OCT,NOV,DEC
+Baqura,Total Rainfall Amount (mm),2018,202.5,106.4,4.4,85.4,13.8,0,0,0,0,10.3,44.9,163.8
+Baqura,Total Rainfall Amount (mm),2019,113.7,107.6,82.6,33.1,0,0,0,0,0.2,1.7,1.8,148.6
+Deir Alla,Total Rainfall Amount (mm),2018,60.6,60.3,4.1,39.7,14.4,6.9,0,0,0,33,18.2,136.7
+Deir Alla,Total Rainfall Amount (mm),2019,68.3,84.8,60.6,10.7,0,0,0,0,0,14.3,14.6,107
+Er Rabbah,Total Rainfall Amount (mm),2018,172.9,92,0.1,26.7,2.3,0,0,0,0,15.9,10.5,40.3
+Er Rabbah,Total Rainfall Amount (mm),2019,12.3,44.6,85.6,21.1,0,0,0,0,0,2.7,6.5,31.5
+Shoubak,Total Rainfall Amount (mm),2018,97.9,55.4,1,20,11.6,0,0,0,0,6,27.6,34.6
+Shoubak,Total Rainfall Amount (mm),2019,1.2,39.8,59.3,6.1,0,0,0,0,0,23.1,0.2,19.1
+Wadi Dhulall,Total Rainfall Amount (mm),2018,34,29.6,0.4,70.9,9,0,0,0,0,4.2,7.5,21
+Wadi Dhulall,Total Rainfall Amount (mm),2019,25.8,40.8,25.9,8,0,0.9,0,0,0,5.5,13,37
+Wadi El-rayyan,Total Rainfall Amount (mm),2018,103.6,72,7.6,62.4,7,0.2,0,0,0,0,39.3,145.7
+Wadi El-rayyan,Total Rainfall Amount (mm),2019,44.9,81.2,52.6,0,0,0,0,0,0,0.2,8,92.7
+Qatraneh,Total Rainfall Amount (mm),2018,80.6,34.9,1.4,17.4,9,0,0,0,0,0,4.3,9
+Qatraneh,Total Rainfall Amount (mm),2019,11.7,52.6,23.4,1.9,0,0,0,0,0,5.2,27,6.9
+Tafileh,Total Rainfall Amount (mm),2018,85.7,64.1,0,25.5,5.5,0,0,0,0,2.2,20.4,28.5
+Tafileh,Total Rainfall Amount (mm),2019,0,35.3,49.1,9.4,0,0,0,0,0,6.6,0.7,16
+Zarqa,Total Rainfall Amount (mm),2018,36.1,28.3,0,22.1,2,0,0,0,0,6,9.7,29.1
+Zarqa,Total Rainfall Amount (mm),2019,23.3,54.3,27.4,4.4,0,0,0,0,0,11,3.7,51
+Salt,Total Rainfall Amount (mm),2018,141.9,92.9,8,37.3,3.3,32.2,0,0,0,33.6,23.8,248.2
+Salt,Total Rainfall Amount (mm),2019,108.4,159.9,125.9,25.8,0,0.8,0,0,0,3.6,3,154.2
+King Hussien International Airport,Total Rainfall Amount (mm),2018,7.9,14.4,0.5,2.3,0.5,0,0,0,0,8,1.9,5.6
+King Hussien International Airport,Total Rainfall Amount (mm),2019,0,8.4,0.2,0.4,0,0,0,0,0,2.4,0,0.4
+Ras Muneef,Total Rainfall Amount (mm),2018,204.4,121.2,16.7,43.9,5.3,2.1,0,0,0,50.1,30,239.1
+Ras Muneef,Total Rainfall Amount (mm),2019,156.6,161.4,107.5,31.7,0,0.1,0,0,0,2.6,11.8,203.5
+Amman Airport,Total Rainfall Amount (mm),2018,100.3,53.9,1.7,25.5,4.3,0.3,0,0,0,10.8,7.5,80.1
+Amman Airport,Total Rainfall Amount (mm),2019,53.4,126.7,58.1,10.9,0.1,0,0,0,0,9.6,15.5,90.4
+Mafraq,Total Rainfall Amount (mm),2018,38.5,28.7,2,13.1,2.5,4.9,0,0,0,5,3.9,31.5
+Mafraq,Total Rainfall Amount (mm),2019,25.7,59,12.1,9.2,0,0,0,0,0,4.4,12.9,44.5
+Safawi (H5),Total Rainfall Amount (mm),2018,13.2,23.1,0,14.7,12.2,0,0,0,0,2.1,4.1,4.7
+Safawi (H5),Total Rainfall Amount (mm),2019,2.7,26.4,3.9,8.2,0,4.6,0,0,0,6.7,27.4,9.3
+Azraq South,Total Rainfall Amount (mm),2018,18.8,10,0.3,7.1,7.2,0,0,0,0,1.7,6.7,3.3
+Azraq South,Total Rainfall Amount (mm),2019,3.3,24.3,3.8,1.5,0,5.3,0,0,0,1.6,11.2,11.6
+Q.A.I.Airport,Total Rainfall Amount (mm),2018,76.8,39.6,0.7,17.8,3.7,0,0,0,0,0,17.2,28.5
+Q.A.I.Airport,Total Rainfall Amount (mm),2019,10.3,36.7,33.3,10.7,0,0.2,0,0,0,9.4,1.4,40.6
+Ma'an,Total Rainfall Amount (mm),2018,7.3,11.3,0.1,30.3,4.1,0,0,0,1,12.7,6.2,2.1
+Ma'an,Total Rainfall Amount (mm),2019,0.5,17,4,2.5,0,0.4,0,0,0,11.5,0.2,1.7
+Al Jafer,Total Rainfall Amount (mm),2018,1.5,15.3,0,4,0,0,0,0,0,7,73.3,0
+Al Jafer,Total Rainfall Amount (mm),2019,0,7,3,6.3,0,1,0,0,0,5.2,1,0
+Ghabawi,Total Rainfall Amount (mm),2018,23.2,27.5,0.2,51.6,2.4,0,0,0,0,3.5,1.5,16.7
+Ghabawi,Total Rainfall Amount (mm),2019,14.2,40.1,13.6,3.2,0,0,0,0,0,2.9,1.8,31.1
