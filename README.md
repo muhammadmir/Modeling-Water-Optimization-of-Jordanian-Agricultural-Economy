@@ -21,16 +21,20 @@ Note: While price data could have been programmatically defined like production 
 ## [Helpers](./Helpers/)
 Many helper functions were made to assist with calculations. I will briefly walk through the functionality of each:
 
-1. [FAO Helpers.R](./Helpers/FAO%20Helpers.R)
-    - Loading, cleaning, and saving FAOSTAT Crop and Livestock Products (QCL) and Detailed Trade Matrix (TM) databases.
-2. [Kc Functions.R](./Helpers/Kc%20Functions.R)
-    - Functionality for computing monthly $K_c$ value to construct expanded $K_c$ and $ET_c$ curves without assuming every month has 30 days.
-3. [METAR Helpers.R](./Helpers/METAR%20Helpers.R)
-    - Collecting, cleaning, and aggregating METAR data from the Iowa Environmental Mesonet (IEM) for monthly $ET_o$ curves
-4. [Optimization Helpers.R](./Helpers/Optimization%20Helpers.R)
-    - Functionality associated with pre- and post- optimization
-5. [Visualization Helpers.R](./Helpers//Visualization%20Helpers.R)
-    - Functionality for creating some of the visuals
+[FAO Helpers.R](./Helpers/FAO%20Helpers.R)
+- Loading, cleaning, and saving FAOSTAT Crop and Livestock Products (QCL) and Detailed Trade Matrix (TM) databases.
+
+[Kc Functions.R](./Helpers/Kc%20Functions.R)
+ - Functionality for computing monthly $K_c$ value to construct expanded $K_c$ and $ET_c$ curves without assuming every month has 30 days.
+
+[METAR Helpers.R](./Helpers/METAR%20Helpers.R)
+- Collecting, cleaning, and aggregating METAR data from the Iowa Environmental Mesonet (IEM) for monthly $ET_o$ curves
+
+[Optimization Helpers.R](./Helpers/Optimization%20Helpers.R)
+- Functionality associated with pre- and post- optimization
+
+[Visualization Helpers.R](./Helpers//Visualization%20Helpers.R)
+- Functionality for creating some of the visuals
 
 ## [Images](./Images/)
 This folder contains the generated plot images.
