@@ -1,3 +1,9 @@
+# This is the example file, it's designed to run example problem from thesis
+
+# install.packages(
+#    c("tidyverse", "mco")
+# )
+
 library(tidyverse)
 library(mco)
 
@@ -5,16 +11,20 @@ library(mco)
 source("./Helpers/Optimization Helpers.R")
 source("./Helpers/Visualization Helpers.R")
 
+# Food security stuff
+FOOD_SECURITY_PERCENT <- 0.25
+FOOD_SECURITY_FACTOR <- 1 / FOOD_SECURITY_PERCENT
+
 TARGET <- "Country T"
 YEAR <- 2019
 
 # Defining Objectives and Constraints
 # ==============================================================================
-# Minimzing water use
+# Calculate Water Use
 f_1 <- function(pq_df, iq_df, eq_df) {
     wf <- crop_df$WF_green + crop_df$WF_blue
 
-    # Water Use by Commodity (Produdction, Import, Export)
+    # Water Use by Commodity (Production, Import, Export)
     # Sum total quantity of each type and multiply by WF.
     pw_df <- colSums(pq_df) * wf
     iw_df <- colSums(iq_df) * wf
@@ -29,9 +39,9 @@ f_1 <- function(pq_df, iq_df, eq_df) {
     return(awu)
 }
 
-# Maximize net revenue
+# Calculate Revenue
 f_2 <- function(pq_df, iq_df, eq_df) {
-    # Total Revenue by Commodity (Proudction, Import, Export)
+    # Total Revenue by Commodity (Production, Import, Export)
     pt_df <- colSums(pq_df * pr_df)
     it_df <- colSums(iq_df * ir_df)
     et_df <- colSums(eq_df * er_df)
@@ -45,7 +55,7 @@ f_2 <- function(pq_df, iq_df, eq_df) {
     return(ant * - 1)
 }
 
-# Reliable Supply: Net qty greater than demand
+# Reliable Supply (Domestic Demand Met)
 g_1 <- function(pq_df, iq_df, eq_df) {
     # Net Quantity (By Commodity)
     nq_df <- colSums(iq_df - eq_df) + colSums(pq_df)
@@ -53,7 +63,7 @@ g_1 <- function(pq_df, iq_df, eq_df) {
     return(sum(nq_df - dom_demand_df))
 }
 
-# Net revenue greater than baseline
+# Revenue >= Baseline
 g_2 <- function(pq_df, iq_df, eq_df) {
     # Net Total Revenue (Reverse Condition)
     ant <- -1 * f_2(pq_df, iq_df, eq_df)
@@ -61,12 +71,12 @@ g_2 <- function(pq_df, iq_df, eq_df) {
     return(ant - min_revenue)
 }
 
-# Security of internal production
+# Food Security (X of Domestic Demand Met Through Production)
 g_3 <- function(pq_df) {
-    return(sum(pq_df - (dom_demand_df / 2)))
+    return(sum(pq_df - (dom_demand_df / FOOD_SECURITY_FACTOR)))
 }
 
-# Water use does not exceed baseline
+# Water Use <= Baseline
 g_4 <- function(pq_df, iq_df, eq_df) {
     awu <- f_1(pq_df, iq_df, eq_df)
 
@@ -112,7 +122,7 @@ dom_demand_df <- tibble(
     !!items[3] := pq_df$Orange + sum(iq_df$Orange) - sum(eq_df$Orange)
 )
 
-# Monteary Rate Tibbles (USD / Tonne)
+# Monetary Rate Tibbles (USD / Tonne)
 pr_df <- tibble(
     !!items[1] := 350,
     !!items[2] := 230,
@@ -137,43 +147,11 @@ max_water_use <- f_1(pq_df, iq_df, eq_df) # m ^ 3
 # Baseline minimum net revenue
 min_revenue <- f_2(pq_df, iq_df, eq_df) * -1 # USD
 
-# Visuals
-
 # Quantity Dist
 print_pie_donut_diagram(pq_df, iq_df, eq_df)
 
 # Revenue Dist
-print_pie_donut_diagram(
-    pq_df * pr_df,
-    iq_df * ir_df,
-    eq_df * er_df
-)
-
-wf <- crop_df$WF_green + crop_df$WF_blue
-
-pw_df <- colSums(pq_df) * wf
-iw_df <- colSums(iq_df) * wf
-ew_df <- colSums(eq_df) * wf
-
-nwu <- (ew_df - iw_df) + pw_df
-
-water_df <- tibble(
-    "Group" = names(nwu),
-    "Value" = unname(nwu),
-    "Percent" = (Value / sum(Value)) * 100
-)
-
-ggplot(water_df, aes(x = "", y = Value, fill = Group)) +
-    geom_bar(stat = "identity", color = "white", width = 1.1) +
-    geom_label(
-        aes(label = prettyNum(Value, big.mark = ",", scientific = FALSE)),
-        color = "white",
-        position = position_stack(vjust = 0.5),
-        show.legend = FALSE
-    ) +
-    coord_polar("y", start = 0) +
-    annotate("text", x = 0, y = 0, label = "Pie Chart Title", size = 5, color = "black") +
-    theme_void()
+print_pie_donut_diagram(pq_df * pr_df, iq_df * ir_df, eq_df * er_df)
 # ==============================================================================
 
 # Running Optimization
@@ -212,8 +190,14 @@ constraint_fn <- function(x) {
 
 run_nsga2 <- function(gensize, popsize) {
     x_dim <- length(pq_df) + 2 * nrow(iq_df) * ncol(iq_df)
+
+    # Get upper limit of each design variable, which is
+    # corresponding baseline value
     upper_limit <- unconverter(pq_df, iq_df, eq_df)
-    upper_limit[upper_limit == 0] <- 0.0000001 # 0 cannot be upper limit.
+
+    # Replace upper limit of 0 to something slightly larger
+    # This is because algorithm cannot have upper and lower bounds being equal
+    upper_limit[upper_limit == 0] <- 0.0000001
 
     start <- Sys.time()
     res <- nsga2(
@@ -237,48 +221,43 @@ print(paste("Running Optimization", gensize, popsize, specifics, sep = " | "))
 res <- run_nsga2(gensize, popsize)
 save(
     res,
-    file = paste0(gensize, "G", " - ", popsize, "P", " - ", specifics, ".RData")
+    file = paste0(gensize, "G", " - ", specifics, ".RData")
 )
 # ==============================================================================
 
 # Visualizing Results
 # ==============================================================================
-filename <- "./Solutions/1000G - 100P - Example Problem.RData"
+filename <- "./Solutions/1000G - Example Problem.RData"
 load(filename)
 
 # To Beat
 c(max_water_use, min_revenue)
 
-# Switch Signs
+# Switch signs of second obj (revenue)
 res$value[, 2] <- res$value[, 2] * -1
 
-plot(res,
-    xlab = "Max Water Usage (m^3)",
-    ylab = "Minimum Revenue (USD)",
-    main = "Objective Space"
-)
+# Whether or not to filter by Pareto optimal solutions
+only_pareto_optimal <- TRUE
 
-# Outputs
-out_df <- res[[2]] %>%
+# Extract output values as a tibble nicely
+out_df <- (res[[2]] %>%
     as_tibble(.name_repair = ~ paste0("f_", seq_along(.))) %>%
-    filter(res[[3]])
-
+    filter(res[[3]] == only_pareto_optimal))
 
 # Objective Function Space
 print_objective_space_diagram(
     out_df,
     "Water Usage (m^3)",
     "Net Revenue (USD)",
-    max_water_use,
-    min_revenue
+    max_water_use, # Optional if want to plot baseline value
+    min_revenue, # Optional, if want to plot baseline value
+    only_pareto_optimal # Optional, whether or not out_df is Pareto Front
 )
-ggsave("Example Objective Function Space.png", path = "./Images/")
 
-# Parameters
-in_df <- res[[1]] %>%
+# Extract input values as tibble nicely
+in_df <- (res[[1]] %>%
     as_tibble(.name_repair = ~ paste0("x_", seq_along(.))) %>%
-    filter(res[[3]]) %>%
-    round(2)
+    filter(res[[3]] == only_pareto_optimal))
 
 unflatten_input_row <- function(row) {
     x <- row %>% unname() %>% converter(items, .)
@@ -288,24 +267,24 @@ unflatten_input_row <- function(row) {
 items <- c("Apple", "Banana", "Orange")
 countries <- c("Country A", "Country B", "Country C")
 
+# Convert input values (design variables) back to matrix (tibble) formats
 in_formatted_df <- do.call(rbind, apply(in_df, 1, unflatten_input_row))
 
-# Visualze a random parameter set of index r
+# Extract information of random solution (Random Design Point r)
 r <- 20
 r_pq_df <- pluck(in_formatted_df[r, ], 1, 1)
 r_iq_df <- pluck(in_formatted_df[r, ], 2, 1)
 r_eq_df <- pluck(in_formatted_df[r, ], 3, 1)
 
+# Water Use of Random Solution
+f_1(r_pq_df, r_iq_df, r_eq_df)
+
+# Revenue of Random Solution
+f_2(r_pq_df, r_iq_df, r_eq_df) * -1
+
 # Quantity Dist (Solution)
 print_pie_donut_diagram(r_pq_df, r_iq_df, r_eq_df)
 
 # Revenue Dist (Solution)
-print_pie_donut_diagram(
-    r_pq_df * pr_df,
-    r_iq_df * ir_df,
-    r_eq_df * er_df
-)
-
-out_df[r, ]
-
+print_pie_donut_diagram(r_pq_df * pr_df, r_iq_df * ir_df, r_eq_df * er_df)
 # ==============================================================================

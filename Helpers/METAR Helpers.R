@@ -1,3 +1,7 @@
+library(riem)
+library(weathermetrics)
+library(SPEI)
+
 #' An internal function for METAR Helpers.
 #'
 #' Computes the monthly aggregates.
@@ -5,9 +9,9 @@
 #' Note: Only computes aggregates for Temp, Min, Max, Dew, Humidity,
 #' and Wind. Precip is summed.
 #'
-#' @param input_df A dataframe.
+#' @param input_df A tibble.
 #'
-#' @return A dataframe containing monthly aggregates.
+#' @return A tibble containing monthly aggregates.
 #'
 aggregate_monthly <- function(input_df) {
     output_df <- input_df %>%
@@ -50,9 +54,9 @@ aggregate_monthly <- function(input_df) {
 #' Note: Only computes aggregates for Temp, Min, Max, Dew, Humidity,
 #' and Wind. Precip is summed.
 #'
-#' @param input_df A dataframe.
+#' @param input_df A tibble.
 #'
-#' @return A dataframe containing daily aggregates.
+#' @return A tibble containing daily aggregates.
 #'
 aggregate_daily <- function(input_df) {
     output_df <- input_df %>%
@@ -84,11 +88,11 @@ aggregate_daily <- function(input_df) {
 #'
 #' Temp and Dew from °F to °C.
 #' Wind from knots to meters per second (mps).
-#' Precip from inches to milimeters (mm).
+#' Precip from inches to millimeters (mm).
 #'
-#' @param input_df A dataframe.
+#' @param input_df A tibble.
 #'
-#' @return A dataframe containing correct columns and units.
+#' @return A tibble containing correct columns and units.
 #'
 clean <- function(input_df) {
     output_df <- input_df %>% mutate(
@@ -114,11 +118,11 @@ clean <- function(input_df) {
     return(output_df)
 }
 
-#' Gets a dataframe containing the monthly aggregates of selected weather
+#' Gets a tibble containing the monthly aggregates of selected weather
 #' parameters during a given period from all available stations for a given
 #' METAR network.
 #'
-#' The dataframe returned contains the following columns: Station, Latitude,
+#' The tibble returned contains the following columns: Station, Latitude,
 #' Longitude, Altitude, Month, Year, Temp, Min, Max, Dew, Humidity, Wind, and
 #' Precip.
 #'
@@ -129,12 +133,12 @@ clean <- function(input_df) {
 #' @param start_date A character.
 #' @param end_date A character.
 #'
-#' @return A dataframe containing the monthly aggregates.
+#' @return A tibble containing the monthly aggregates.
 #'
 get_monthly_df <- function(network_code, start_date, end_date) {
     stations_df <- riem_stations(network = network_code)
 
-    # Get data of all stations as a list of dataframes.
+    # Get data of all stations as a list of tibbles.
     grouped_df <- lapply(
         stations_df$id,
         riem_measures,
@@ -157,11 +161,11 @@ get_monthly_df <- function(network_code, start_date, end_date) {
 
 #' An internal function for METAR Helpers.
 #'
-#' Calculates the monthly ETo for the input dataframe.
+#' Calculates the monthly ETo for the input tibble using SPEI package.
 #'
-#' @param input_df A dataframe.
+#' @param input_df A tibble.
 #'
-#' @return A dataframe containing the ETo column.
+#' @return A tibble containing the ETo column.
 #'
 calculate_monthly_ETo <- function(input_df) {
     input_df <- input_df %>%
@@ -186,11 +190,12 @@ calculate_monthly_ETo <- function(input_df) {
 
 #' An internal function for METAR Helpers.
 #'
-#' Calculates the monthly Peff for the input dataframe.
+#' Calculates the monthly Peff for the input tibble. We use the formula
+#' that is recommended by the FAO.
 #'
-#' @param input_df A dataframe.
+#' @param input_df A tibble.
 #'
-#' @return A dataframe containing the Peff column.
+#' @return A tibble containing the Peff column.
 #'
 calculate_monthly_Peff <- function(input_df) {
     input_df <- input_df %>%
@@ -209,17 +214,14 @@ calculate_monthly_Peff <- function(input_df) {
 
 #' Calculates the monthly ETo and effective precipitation (Peff).
 #'
-#' The following assumptions are made in order to calculate the ETo:
-#' 1) There are at least 3 months (or rows) of data. This is because the soil
-#' heat flux (G) is based on temperatures from other months.
-#' 2) The daily average hours of sunshine is encoded in the Sunshine column.
-#' 3) Assumption #3
+#' We utilize the FAO P-M equation for monthly calculations of ETo using SPEI
+#' package. Assumptions are automatically outputted by default. Additionally,
+#' we use the FAO recommended formula for calculating Peff.
 #'
-#' Additionally,The [X] method is used to calculate Peff.
 #'
-#' @param monthly_df A dataframe.
+#' @param monthly_df A tibble.
 #'
-#' @return A dataframe containing the ETo and Peff columns.
+#' @return A tibble containing the ETo and Peff columns.
 #'
 calc_ETo_and_Peff <- function(monthly_df) {
     # Split by each station's attributes again for ETo calculation.
@@ -229,7 +231,7 @@ calc_ETo_and_Peff <- function(monthly_df) {
 
     split_df <- lapply(split_df, calculate_monthly_ETo)
 
-    # Re-group into single dataframe as Peff calculation isn't
+    # Re-group into single tibble as Peff calculation isn't
     # station-dependent.
     master_df <- do.call(rbind, split_df)
 

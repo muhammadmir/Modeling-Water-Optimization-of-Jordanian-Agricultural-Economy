@@ -1,8 +1,8 @@
 #' An internal function utilized by calculate_Kc_curve.
 #'
-#' This function updates the Kc values on the Kc curve dataframe.
+#' This function updates the Kc values on the Kc curve tibble
 #'
-#' @param Kc_curve A dataframe with the first column being the day and the
+#' @param Kc_curve A tibble with the first column being the day and the
 #' second column containing the Kc value at that day.
 #' @param days A vector containing the days whose Kc value needs to be
 #' updated.
@@ -29,13 +29,14 @@ update_Kc_curve <- function(Kc_curve, days, Kc) {
 #'
 #' Additionally, this curve is expanded to include all the number of days
 #' in a year and their corresponding Kc values, which are trivially 0. This
-#' expanded Kc curve allows a more accurate calculation of the monthly average
-#' Kc value, which does not assume every month has 30 days like the FAO does.
+#' expanded Kc curve allows for a more accurate calculation of the monthly
+#' average Kc value, which does not assume every month has 30 days like the
+#' FAO does.
 #'
-#' @param crop A dataframe containing the crop growing stages, Kc values,
+#' @param crop A tibble containing the crop growing stages, Kc values,
 #' plant date.
 #'
-#' @return A dataframe with the first column being the day and the second
+#' @return A tibble with the first column being the day and the second
 #' column containing the Kc value at that day.
 #'
 calculate_Kc_curve <- function(crop) {
@@ -136,16 +137,16 @@ calculate_Kc_curve <- function(crop) {
 #' Two things should be noted:
 #' 1) When using these values to calculate ETc, the number of months should be
 #' equal. In the first example above, monthly ETo values from 2019-01-01 to
-#' 2019-12-31 should be calcuted. For the second example, montly ETo values from
+#' 2019-12-31 should be calculated. For the second example, monthly ETo values from
 #' 2019-01-01 to 2020-12-31 should be calculated.
 #'
-#' 2) Traditional FAO methodolgoy suggests the assumption of 30 day averages for
+#' 2) Traditional FAO methodology suggests the assumption of 30 day averages for
 #' for every month. However, this function accounts for the actual number of
 #' days for every month.
 #'
-#' @param Kc_curve A dataframe with the first column being the day and the
+#' @param Kc_curve A tibble with the first column being the day and the
 #' second column containing the Kc value at that day.
-#' @param crop A dataframe containing the crop growing stages, Kc values,
+#' @param crop A tibble containing the crop growing stages, Kc values,
 #' plant date.
 #'
 #' @return A vector of monthly average Kc values of length
@@ -164,7 +165,7 @@ mean_monthly_Kc <- function(Kc_curve, crop) {
 
     # Goal is to increment by 1 day across by row and leave NA everywhere
     # where the corresponding row translated to a month (i.e. 3 -> March)
-    # doesn't have an actual calendar day. 
+    # doesn't have an actual calendar day.
     month_matrix <- matrix(nrow = 12 * (year_end - year_start + 1), ncol = 31)
 
     # Define matrix rows

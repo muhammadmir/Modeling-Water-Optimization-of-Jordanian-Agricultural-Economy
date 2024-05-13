@@ -1,9 +1,7 @@
+# This is the visualizations file, it contains some code on how graphs
+# shown in thesis were created.
+
 library(tidyverse)
-library(treemapify)
-library(FAOSTAT)
-library(RColorBrewer)
-library(webr)
-library(networkD3)
 
 source("./Helpers/Kc Functions.R")
 source("./Helpers/FAO Helpers.R")
@@ -52,17 +50,6 @@ monthly_df["Precip"] <- c(
     pull_data("King Hussien International Airport", precip_df)
 )
 
-# Make map?
-jordan_map <- map_data(map = "world", region = "Jordan")
-ggplot() +
-    geom_polygon(
-        data = jordan_map,
-        aes(x = long, y = lat, group = group),
-        color = "black",
-        fill = "white"
-    ) +
-    theme_classic(base_size = 16)
-
 # Calculate ETo and Peff
 monthly_df <- calc_ETo_and_Peff(monthly_df)
 
@@ -110,7 +97,7 @@ ggsave("Peff vs. Time.png", path = "./Images/")
 # ===========================================================================
 
 # Assumptions
-# L: Low alittude
+# L: Low altitude
 # Kc: No ground cover, no frost
 apricot_crop <- tibble(
     crop = "Apricot",
@@ -432,187 +419,3 @@ items <- c(
 tm_import_df %>% ungroup() %>%
 filter(Item %in% items) %>% summarise(sum(USD)) / sum(tm_import_df$USD)
 # ===========================================================================
-
-# Case Study Data
-# ===========================================================================
-country_code <- 112
-item_codes <- c(
-    526, # Apricot
-    44, # Barley
-    397, # Cucumber
-    56, # Maize
-    534, # Peach
-    388, # Tomato
-    15 # Wheat
-)
-
-# Only run once.
-# save_prod_df(country_code, c(), YEAR)
-
-prod_df <- read.csv("./Data/FAO Prod Filtered.csv") %>%
-    as_tibble() %>%
-    filter(Code %in% item_codes) %>%
-    select(-Code) %>%
-    mutate(
-        Item = case_when(
-            Item == "Apricots" ~ "Apricot",
-            Item == "Cucumbers and gherkins" ~ "Cucumber",
-            Item == "Maize (corn)" ~ "Maize",
-            Item == "Peaches and nectarines" ~ "Peach",
-            Item == "Tomatoes" ~ "Tomato",
-            .default = Item
-        )
-    )
-
-# Adding Maize missing Yield
-prod_df <- prod_df %>%
-    add_row( # Maize Yield (1)
-        Item = "Maize",
-        Element = "yield",
-        Year = 2019,
-        Unit = "tonne/ha",
-        Value = 1,
-        Flag = "M"
-    ) %>%
-    arrange(Item)
-
-# Fixed Values (WF_blue / WF_green): Used later in optimization.
-crop_df <- set_wf(crop_df, prod_df)
-
-wf_df <- crop_df %>%
-    mutate(WF_total = WF_blue + WF_green) %>%
-    select(crop, WF_total) %>%
-    pivot_wider(names_from = crop, values_from = WF_total)
-
-# Only run once.
-# save_tm_df(country_code, c(), YEAR)
-
-tm_df <- read.csv("./Data/FAO TM Filtered.csv") %>%
-    as_tibble() %>%
-    filter(Code %in% item_codes) %>%
-    select(-Code) %>%
-    mutate(
-        Item = case_when(
-            Item == "Apricots" ~ "Apricot",
-            Item == "Cucumbers and gherkins" ~ "Cucumber",
-            Item == "Maize (corn)" ~ "Maize",
-            Item == "Peaches and nectarines" ~ "Peach",
-            Item == "Tomatoes" ~ "Tomato",
-            .default = Item
-        )
-    )
-
-# All countries involved in trade
-countries <- tm_df %>%
-    distinct(Country) %>%
-    pull() %>%
-    sort()
-
-# All items involved in trade
-items <- tm_df %>%
-    distinct(Item) %>%
-    pull() %>%
-    sort()
-
-# I/E rate and I/E quantity dataframes
-tm_df <- get_full_tm(tm_df, countries, items)
-ie_rq_dfs <- get_rate_and_qty_tm(tm_df, countries, items)
-
-# Fixed Values: Used later in optimization.
-ir_df <- ie_rq_dfs[[1]]
-er_df <- ie_rq_dfs[[2]]
-
-# From Production Data (Units: Tonne)
-dom_prod_qty <- prod_df %>% filter(Element == "production") %>% pull(Value)
-
-pq_df <- tibble(items, dom_prod_qty) %>% spread(items, dom_prod_qty)
-
-# From Trade Data (Units: Tonne)
-iq_df <- ie_rq_dfs[[3]]
-eq_df <- ie_rq_dfs[[4]]
-
-net_demand <- dom_prod_qty + unname(colSums(iq_df - eq_df)) # Units: Tonne
-dom_demand_df <- tibble(items, net_demand) %>% spread(items, net_demand)
-
-# From FAO Directly (USD / Tonne)
-dom_rate <- c(
-    852, # Apricot
-    492.3, # Barley
-    324.1, # Cucumber
-    286.1, # Maize
-    676.3, # Peach
-    172.5, # Tomato
-    563.2 # Wheat
-)
-pr_df <- tibble(items, dom_rate) %>% spread(items, dom_rate)
-
-# Divide by Million
-pq_df <- (pq_df / 1E6) %>% as_tibble()
-iq_df <- (iq_df / 1E6) %>% as_tibble()
-eq_df <- (eq_df / 1E6) %>% as_tibble()
-dom_demand_df <- (dom_demand_df / 1E6) %>% as_tibble()
-
-# Baseline maximum water use
-max_water_use <- f_1(pq_df, iq_df, eq_df) # Units: MCM
-
-# Baseline minimum net revenue
-min_revenue <- f_2(pq_df, iq_df, eq_df) * -1 # Units: M USD
-
-# Quantity Distribution
-print_pie_donut_diagram(pq_df, iq_df, eq_df)
-
-# WF Distribution
-prod_wf <- (pq_df * wf_df) %>% as_tibble()
-import_wf <- ((iq_df %>% colSums) * wf_df) %>% as_tibble()
-export_wf <- ((eq_df %>% colSums) * wf_df) %>% as_tibble()
-
-
-# Revenue Distribution
-print_pie_donut_diagram(pq_df * pr_df, iq_df * ir_df, eq_df * er_df)
-
-# ===========================================================================
-
-
-# Trace Plot
-# ===========================================================================
-
-# Defining Constant
-max_water_use <- -9517.037
-min_revenue <- -103.9162
-
-
-# Loading Solutions
-out_df <- tibble()
-file_df <- tibble(
-    location = c(
-        "./Solutions/50000G - 100P - 3 Import 4 Export Reverse F1.RData",
-        "./Solutions/100000G - 100P - 3 Import 4 Export.RData",
-        "./Solutions/200000G - 100P - 3 Import 4 Export.RData"
-        ),
-    name = c("50,000 Generations", "100,000 Generations", "200,000 Generations")
-)
-
-for (index in seq_len(length(filenames))) {
-    load(file_df[index, ]$location)
-    res$value[, 2] <- res$value[, 2] * -1
-
-    temp_df <- res[[2]] %>%
-        as_tibble(.name_repair = ~ paste0("f_", seq_along(.))) %>%
-        mutate(solution_type = file_df[index, ]$name)
-
-    print((temp_df %>% summarize(f_1_mean = mean(f_1), f_2_mean = mean(f_2))))
-
-    out_df <- out_df %>% bind_rows(temp_df)
-}
-
-
-print_objective_space_diagram(
-    (out_df %>% select(-solution_type)),
-    "Water Usage (MCM)",
-    "Net Revenue (M USD)",
-    max_water_use,
-    min_revenue,
-    FALSE
-)
-
-ggplot(out_df)

@@ -1,3 +1,24 @@
+library(webr)
+library(networkD3)
+
+#' An internal function utilized to generate complex graphics.
+#'
+#' This function converts production, import, and export tibble into a single
+#' "long format" tibble for sankey network and pie donut visuals. It is not
+#' limited to quantity or revenue versions of these tibbles. If sum_quantity
+#' is true, it sums the Quantity column for each tibble.
+#'
+#' Note: The variable countries (all unique countries involved in trade), and
+#' TARGET (the name of the target country that is being optimized) should
+#' already be declared to use this function.
+#'
+#' @param prod_df A dataframe.
+#' @param import_df A dataframe.
+#' @param export_df A dataframe.
+#' @param sum_quantity A logical. Defaults to false.
+#'
+#' @return A "long format" tibble of the argument tibbles.
+#'
 long_format <- function(prod_df, import_df, export_df, sum_quantity=FALSE) {
     temp_country <- rep(
         countries,
@@ -38,6 +59,24 @@ long_format <- function(prod_df, import_df, export_df, sum_quantity=FALSE) {
     return(bind_rows(a, b, c))
 }
 
+#' Creates objective function space plot.
+#'
+#' This function plots the objective function space of out_df, as created in
+#' Analysis.R. Whether or not out_df is the Pareo Fronter can be specified by
+#' the optimal argument. The graph axes are labeled by xlab and ylab.
+#' Optionally, the baseline water use and revenue can be plotted on the graph.
+#' An accompanying legend based on specifications above is placed in the top
+#' right.
+#'
+#' @param out_df A dataframe.
+#' @param xlab A character.
+#' @param ylab A character.
+#' @param max_water_use A numeric. Defaults to false.
+#' @param min_revenue A numeric. Defaults to false.
+#' @param optimal A logical. Defaults to false.
+#'
+#' @return Prints plot.
+#'
 print_objective_space_diagram <- function(out_df, xlab, ylab, max_water_use=FALSE, min_revenue=FALSE, optimal=TRUE) {
     labels <- c()
     values <- c()
@@ -105,8 +144,24 @@ print_objective_space_diagram <- function(out_df, xlab, ylab, max_water_use=FALS
     print(g1)
 }
 
-print_sankey_diagram <- function(pq_df, iq_df, eq_df) {
-    lf_df <- long_format(pq_df, iq_df, eq_df, sum_quantity = FALSE)
+#' Creates sankey diagram (not completely developed).
+#'
+#' Plots a sankey diagram showing quantity flow of commodities from target and
+#' trading countries, grouped by type (Production, Import, Export). This
+#' function needs more work so it is more visually appealing.
+#'
+#' Note: The variable countries (all unique countries involved in trade), and
+#' TARGET (the name of the target country that is being optimized) should
+#' already be declared to use this function.
+#'
+#' @param prod_df A dataframe.
+#' @param import_df A dataframe.
+#' @param export_df A dataframe.
+#'
+#' @return Prints plot.
+#'
+print_sankey_diagram <- function(prod_df, import_df, export_df) {
+    lf_df <- long_format(prod_df, import_df, export_df, sum_quantity = FALSE)
     # Links
     links <- lf_df %>% as.data.frame()
 
@@ -171,20 +226,24 @@ print_sankey_diagram <- function(pq_df, iq_df, eq_df) {
     print(p)
 }
 
-print_heatmap <- function(prod_df, import_df, export_df) {
-    lf_df <- long_format(prod_df, import_df, export_df, sum_quantity = FALSE)
-
-    ggplot(
-        lf_df %>% filter(Type == "Export"),
-        aes(x = Item, y = Country)
-        ) +
-        geom_raster(aes(fill = Quantity)) +
-        scale_fill_gradient(low = "#ffffff", high = "#1EAE98") +
-        labs(x = "Products", y = "Countries") +
-        theme_minimal()
-}
-
-
+#' Creates pie donut plot.
+#'
+#' This function plots the pie donut graph of the production, import and export
+#' tibbles It is not limited to quantity or revenue versions of these tibbles.
+#' The inner pie plots the different aggregate proportions of the crops while
+#' the outter donut plots the proportions OF THAT SAME CROP in terms of
+#' Production, Import, and Export.
+#'
+#' Note: The variable countries (all unique countries involved in trade), and
+#' TARGET (the name of the target country that is being optimized) should
+#' already be declared to use this function.
+#' 
+#' @param prod_df A dataframe.
+#' @param import_df A dataframe.
+#' @param export_df A dataframe.
+#'
+#' @return Prints plot.
+#'
 print_pie_donut_diagram <- function(prod_df, import_df, export_df) {
     lf_sum_df <- long_format(prod_df, import_df, export_df, sum_quantity = TRUE)
 

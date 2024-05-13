@@ -1,7 +1,9 @@
+library(FAOSTAT)
+
 #' Correct FAO unit value to a standard unit value.
 #'
 #' This function takes an FAO unit and determines factor to multiply by to
-#' convert to a standard unit. This function and correnct_unit are correlated.
+#' convert to a standard unit. This function and correct_unit are correlated.
 #'
 #' @param unit A string value.
 #'
@@ -49,8 +51,8 @@ correct_unit <- function(unit) {
 #' This function takes the crops and FAO domestic production data to calculate
 #' the blue and green water footprints of each crop.
 #'
-#' @param crop_df A dataframe.
-#' @param prod_df A dataframe.
+#' @param crop_df A tibble.
+#' @param prod_df A tibble.
 #'
 #' @return Modified crop_df with WF_blue and WF_green as new columns.
 #'
@@ -75,10 +77,10 @@ set_wf <- function(crop_df, prod_df) {
 #' Items are imported from but one or more Items are not exported to, and
 #' vice-versa.
 #'
-#' @param tm_df A dataframe.
-#' @param combinations A dataframe.
+#' @param tm_df A tibble.
+#' @param combinations A tibble.
 #'
-#' @return The full trade matrix as a dataframe.
+#' @return The full trade matrix as a tibble.
 #'
 add_missing_rows <- function(tm_df, combinations) {
     for (prefix in c("import", "export")) {
@@ -121,16 +123,16 @@ add_missing_rows <- function(tm_df, combinations) {
 #' Countries who one or more Items are imported from but one or more Items are
 #' not exported to, and vice-versa.
 #'
-#' @param tm_df A dataframe.
+#' @param tm_df A tibble.
 #' @param countries A vector.
 #' @param items A vector.
 #'
-#' @return The full trade matrix as a dataframe, arranged by Country.
+#' @return The full trade matrix as a tibble, arranged by Country.
 #'
 get_full_tm <- function(tm_df, countries, items) {
     # Cartesian product of both
     combinations <- expand.grid("Country" = countries, "Item" = items) %>%
-        as_tibble
+        as_tibble()
 
     # Sorting alphabetically
     tm_df <- add_missing_rows(tm_df, combinations) %>%
@@ -143,24 +145,24 @@ get_full_tm <- function(tm_df, countries, items) {
 #'
 #' This function takes the full trade matrix and calculates the exchange rate
 #' cost in USD per tonne. The output is a list. The first two items are the
-#' I/E rate matrices as dataframes, respectively. The last two items are the
-#' I/E quantity matrices as dataframes, respectively.
+#' I/E rate matrices as tibbles, respectively. The last two items are the
+#' I/E quantity matrices as tibbles, respectively.
 #'
 #' The row number can be mapped to the list of countries as they are sorted
 #' alphabetically.
 #'
-#' @param tm_full_df A dataframe.
+#' @param tm_full_df A tibble.
 #' @param countries A vector.
 #' @param items A vector.
 #'
-#' @return A list containing the I/E rate matrices and quantities as dataframes.
+#' @return A list containing the I/E rate matrices and quantities as tibbles.
 #'
 get_rate_and_qty_tm <- function(tm_full_df, countries, items) {
-    # Import and export rate dataframes
+    # Import and export rate tibbles
     ir_df <- tibble(.rows = length(countries))
     er_df <- tibble(.rows = length(countries))
 
-    # Import and export quantity dataframes
+    # Import and export quantity tibbles
     iq_df <- tibble(.rows = length(countries))
     eq_df <- tibble(.rows = length(countries))
 
@@ -211,11 +213,6 @@ get_rate_and_qty_tm <- function(tm_full_df, countries, items) {
     }
 
     return(list(ir_df, er_df, iq_df, eq_df))
-}
-
-get_raw_prod_df <- function() {
-    prod_df <- get_faostat_bulk("QCL") %>% as_tibble()
-    return(prod_df)
 }
 
 #' Either saves or returns the FAO production information from the QCL database
@@ -280,11 +277,6 @@ save_prod_df <- function(country_codes, item_codes, years, save=TRUE) {
     )
 }
 
-get_raw_tm_df <- function() {
-    tm_df <- get_faostat_bulk("TM") %>% as_tibble()
-    return(tm_df)
-}
-
 #' Either saves or returns the FAO trade matrix information from the TM
 #' database for the given parameters in a CSV file with the name
 #' "FAO TM Filtered.csv" in the Data folder.
@@ -344,40 +336,4 @@ save_tm_df <- function(country_codes, item_codes, years, save=TRUE) {
         sep = ",",
         row.names = FALSE
     )
-}
-
-merge_tm_df <- function(tm_df) {
-    unique_df <- tm_df %>%
-        group_by(Country, Item, Element, Unit) %>%
-        filter(n() == 1) %>%
-        ungroup()
-
-    duplicate_df <- tm_df %>%
-        group_by(Country, Item, Element, Unit) %>%
-        filter(n() > 1) %>%
-        ungroup()
-
-    summed_df <- duplicate_df %>%
-        group_by(Country, Item, Element, Unit) %>%
-        summarize(
-            Value = sum(Value),
-            Flag = first(Flag)
-        ) %>%
-        ungroup()
-
-    merged_df <- rbind(unique_df, summed_df) %>%
-        arrange(Country)
-
-    return(merged_df)
-}
-
-animal_format_tm_df <- function(tm_df, animal_df) {
-    exclude_df <- tm_df %>%
-        filter(
-            Item %in% animal_df$animal,
-            Unit == "tonne",
-        )
-    
-    
-    return(anti_join(tm_df, exclude_df))
 }

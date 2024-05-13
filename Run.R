@@ -1,11 +1,7 @@
+# This is the run file. Its were you should run analyses.
+
 library(tidyverse)
-library(maps)
-library(riem)
-library(weathermetrics)
-library(SPEI)
-library(FAOSTAT)
 library(mco)
-library(webr)
 
 # Helpers
 source("./Helpers/FAO Helpers.R")
@@ -14,11 +10,16 @@ source("./Helpers/METAR Helpers.R")
 source("./Helpers/Optimization Helpers.R")
 source("./Helpers/Visualization Helpers.R")
 
+# Food security stuff
+FOOD_SECURITY_PERCENT <- 0.25
+FOOD_SECURITY_FACTOR <- 1 / FOOD_SECURITY_PERCENT
+
+# Used to get METAR data and pull from JMD csv file
 YEAR <- 2019
 YEARS_BACK <- 1
 
 # Calculating ETo and Peff from METAR Weather Data
-# ==============================================================================
+# =============================================================================
 network_code <- "JO__ASOS"
 start_date <- ymd(paste0((YEAR - YEARS_BACK), "-01-01"))
 end_date <- ymd(paste0(YEAR, "-12-31"))
@@ -27,11 +28,11 @@ end_date <- ymd(paste0(YEAR, "-12-31"))
 monthly_df <- get_monthly_df(network_code, start_date, end_date) %>%
     arrange(Station)
 
-# Load JMD data
+# Load JMD csv file
 precip_df <- read.csv("./Data/JMD Precip 2018-2019.csv") %>% as_tibble()
 sunshine_df <- read.csv("./Data/JMD Sunshine 2018-2019.csv") %>% as_tibble()
 
-# Helpful function for pulling data from JMD data.
+# Helpful function for pulling data from JMD csv file.
 pull_data <- function(station, df) {
     values <- df %>%
         filter(Station == station) %>%
@@ -59,8 +60,6 @@ monthly_df["Precip"] <- c(
 # Calculate ETo and Peff
 monthly_df <- calc_ETo_and_Peff(monthly_df)
 
-# Question: Sub average monthly Peff from spreadsheet instead?
-
 # Average ETo and Peff (temporally)
 monthly_df <- monthly_df %>%
     group_by(Date) %>%
@@ -70,14 +69,11 @@ monthly_df <- monthly_df %>%
 # Selecting Crops and Calculating their ETc
 # ==============================================================================
 
-# General Notes
-# ETo is lowest typically in November - March
-# Strategy should be to plant in November and harvest in March
-# Most of the growth period should fall between those months
-# Help: https://www.researchgate.net/publication/265013042_Optimization_of_the_Cropping_Pattern_in_Northern_and_Southern_part_of_Jordan_Valley_under_drought_conditions_and_limited_water_availability
+# General Strategy
+# Plant in cooler months (Nov - March), harvest in warmer months (April - Oct)
 
 # Assumptions
-# L: Low alittude
+# L: Low altitude
 # Kc: No ground cover, no frost
 apricot_crop <- tibble(
     crop = "Apricot",
@@ -146,8 +142,8 @@ wheat_crop <- tibble(
 
 # Selected crops
 crops <- list(
-    wheat_crop, maize_crop, barley_crop, # Imports
-    tomato_crop, apricot_crop, peach_crop, cucumber_crop # Exports
+    wheat_crop, maize_crop, barley_crop, # Major import crops
+    tomato_crop, apricot_crop, peach_crop, cucumber_crop # Major export crops
 )
 
 calculate_ETc <- function(crop) {
@@ -198,12 +194,13 @@ calc_stats <- function(crop) {
     return(list(crop_df))
 }
 
+# Arranging alphabetically is important for consistency across calculations.
 crop_df <- bind_rows(sapply(crops, calc_stats)) %>% arrange(crop)
 # ==============================================================================
 
 # Loading FAO Data
 # ==============================================================================
-country_code <- 112
+country_code <- 112 # Jordan
 item_codes <- c(
     526, # Apricot
     44, # Barley
@@ -244,7 +241,7 @@ prod_df <- prod_df %>%
     ) %>%
     arrange(Item)
 
-# Fixed Values (WF_blue / WF_green): Used later in optimization.
+# These are fixed rates used later in optimization.
 crop_df <- set_wf(crop_df, prod_df)
 
 # Only run once.
@@ -277,7 +274,7 @@ items <- tm_df %>%
     pull() %>%
     sort()
 
-# I/E rate and I/E quantity dataframes
+# I/E rate and I/E quantity tibbles
 tm_df <- get_full_tm(tm_df, countries, items)
 ie_rq_dfs <- get_rate_and_qty_tm(tm_df, countries, items)
 
@@ -288,11 +285,11 @@ er_df <- ie_rq_dfs[[2]]
 
 # Defining Objectives and Constraints
 # ==============================================================================
-# Minimzing water use
+# Calculate Water Use
 f_1 <- function(pq_df, iq_df, eq_df) {
     wf <- crop_df$WF_green + crop_df$WF_blue
 
-    # Water Use by Commodity (Produdction, Import, Export)
+    # Water Use by Commodity (Production, Import, Export)
     # Sum total quantity of each type and multiply by WF.
     pw_df <- colSums(pq_df) * wf
     iw_df <- colSums(iq_df) * wf
@@ -307,9 +304,9 @@ f_1 <- function(pq_df, iq_df, eq_df) {
     return(awu)
 }
 
-# Maximize net revenue
+# Calculate Revenue
 f_2 <- function(pq_df, iq_df, eq_df) {
-    # Total Revenue by Commodity (Proudction, Import, Export)
+    # Total Revenue by Commodity (Production, Import, Export)
     pt_df <- colSums(pq_df * pr_df)
     it_df <- colSums(iq_df * ir_df)
     et_df <- colSums(eq_df * er_df)
@@ -323,7 +320,7 @@ f_2 <- function(pq_df, iq_df, eq_df) {
     return(ant * - 1)
 }
 
-# Reliable Supply: Net qty greater than demand
+# Reliable Supply (Domestic Demand Met)
 g_1 <- function(pq_df, iq_df, eq_df) {
     # Net Quantity (By Commodity)
     nq_df <- colSums(iq_df - eq_df) + colSums(pq_df)
@@ -331,7 +328,7 @@ g_1 <- function(pq_df, iq_df, eq_df) {
     return(sum(nq_df - dom_demand_df))
 }
 
-# Net revenue greater than baseline
+# Revenue >= Baseline
 g_2 <- function(pq_df, iq_df, eq_df) {
     # Net Total Revenue (Reverse Condition)
     ant <- -1 * f_2(pq_df, iq_df, eq_df)
@@ -339,12 +336,12 @@ g_2 <- function(pq_df, iq_df, eq_df) {
     return(ant - min_revenue)
 }
 
-# Security of internal production
+# Food Security (X of Domestic Demand Met Through Production)
 g_3 <- function(pq_df) {
-    return(sum(pq_df - (dom_demand_df / 2)))
+    return(sum(pq_df - (dom_demand_df / FOOD_SECURITY_FACTOR)))
 }
 
-# Water use does not exceed baseline
+# Water Use <= Baseline
 g_4 <- function(pq_df, iq_df, eq_df) {
     awu <- f_1(pq_df, iq_df, eq_df)
 
@@ -354,14 +351,12 @@ g_4 <- function(pq_df, iq_df, eq_df) {
 
 # Calculating Baseline Values
 # ==============================================================================
-# From Production Data
-dom_prod_qty <- prod_df %>%
-    filter(Element == "production") %>%
-    pull(Value) # Units: Tonne
+# From Production Data (Units: Tonne)
+dom_prod_qty <- prod_df %>% filter(Element == "production") %>% pull(Value)
 
 pq_df <- tibble(items, dom_prod_qty) %>% spread(items, dom_prod_qty)
 
-# From Trade Data
+# From Trade Data (Units: Tonne)
 iq_df <- ie_rq_dfs[[3]]
 eq_df <- ie_rq_dfs[[4]]
 
@@ -369,6 +364,7 @@ net_demand <- dom_prod_qty + unname(colSums(iq_df - eq_df)) # Units: Tonne
 dom_demand_df <- tibble(items, net_demand) %>% spread(items, net_demand)
 
 # From FAO Directly (USD / Tonne)
+# Or world average at time
 dom_rate <- c(
     852, # Apricot
     492.3, # Barley
@@ -380,17 +376,11 @@ dom_rate <- c(
 )
 pr_df <- tibble(items, dom_rate) %>% spread(items, dom_rate)
 
-# Divide by Million
-pq_df <- (pq_df) %>% as_tibble()
-iq_df <- (iq_df) %>% as_tibble()
-eq_df <- (eq_df) %>% as_tibble()
-dom_demand_df <- dom_demand_df
-
 # Baseline maximum water use
-max_water_use <- f_1(pq_df, iq_df, eq_df) # Units: m^3
+max_water_use <- f_1(pq_df, iq_df, eq_df) / 1E6 # Units: MCM
 
 # Baseline minimum net revenue
-min_revenue <- f_2(pq_df, iq_df, eq_df) * -1 # Units: USD
+min_revenue <- f_2(pq_df, iq_df, eq_df) * -1 / 1E6 # Units: M USD
 # ==============================================================================
 
 # Running Optimization
@@ -429,8 +419,14 @@ constraint_fn <- function(x) {
 
 run_nsga2 <- function(gensize, popsize) {
     x_dim <- length(pq_df) + 2 * nrow(iq_df) * ncol(iq_df)
+
+    # Get upper limit of each design variable, which is
+    # corresponding baseline value
     upper_limit <- unconverter(pq_df, iq_df, eq_df)
-    upper_limit[upper_limit == 0] <- 0.0000001 # 0 cannot be upper limit.
+
+    # Replace upper limit of 0 to something slightly larger
+    # This is because algorithm cannot have upper and lower bounds being equal
+    upper_limit[upper_limit == 0] <- 0.0000001
 
     start <- Sys.time()
     res <- nsga2(
@@ -446,13 +442,14 @@ run_nsga2 <- function(gensize, popsize) {
     return(res)
 }
 
-gensize <- 200000
+gensize <- 100000
 popsize <- 100
-specifics <- "Half Food"
+specifics <- "25% FS"
 print(paste("Running Optimization", gensize, popsize, specifics, sep = " | "))
 
 res <- run_nsga2(gensize, popsize)
 save(
     res,
-    file = paste0(gensize, "G", " - ", popsize, "P", " - ", specifics, ".RData")
+    file = paste0(gensize, "G", " - ", specifics, ".RData")
 )
+# ==============================================================================
